@@ -1,105 +1,142 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CaptchaVerify from '@/components/CaptchaVerify.vue'
 
 const router = useRouter()
 
-const formData = ref({
+interface LoginForm {
+  username: string
+  password: string
+  captcha: string
+}
+
+const form = reactive<LoginForm>({
   username: '',
   password: '',
   captcha: '',
 })
 
-const errors = ref({
+const errors = reactive({
   username: '',
   password: '',
   captcha: '',
 })
 
+const loading = ref(false)
 const captchaRef = ref<InstanceType<typeof CaptchaVerify> | null>(null)
-const isLoading = ref(false)
-const captchaVerified = ref(false)
+
+const validateUsername = (): boolean => {
+  if (!form.username.trim()) {
+    errors.username = '请输入用户名'
+    return false
+  }
+  if (form.username.length < 3) {
+    errors.username = '用户名至少3个字符'
+    return false
+  }
+  if (form.username.length > 20) {
+    errors.username = '用户名不能超过20个字符'
+    return false
+  }
+  errors.username = ''
+  return true
+}
+
+const validatePassword = (): boolean => {
+  if (!form.password) {
+    errors.password = '请输入密码'
+    return false
+  }
+  if (form.password.length < 6) {
+    errors.password = '密码至少6个字符'
+    return false
+  }
+  errors.password = ''
+  return true
+}
+
+const validateCaptcha = (): boolean => {
+  if (!form.captcha) {
+    errors.captcha = '请输入验证码'
+    return false
+  }
+  if (captchaRef.value && !captchaRef.value.verify(form.captcha)) {
+    errors.captcha = '验证码错误'
+    captchaRef.value.refresh()
+    form.captcha = ''
+    return false
+  }
+  errors.captcha = ''
+  return true
+}
 
 const validateForm = (): boolean => {
-  errors.value = { username: '', password: '', captcha: '' }
-  let isValid = true
-
-  if (!formData.value.username.trim()) {
-    errors.value.username = '请输入用户名'
-    isValid = false
-  } else if (formData.value.username.length < 3) {
-    errors.value.username = '用户名至少3个字符'
-    isValid = false
-  }
-
-  if (!formData.value.password) {
-    errors.value.password = '请输入密码'
-    isValid = false
-  } else if (formData.value.password.length < 6) {
-    errors.value.password = '密码至少6个字符'
-    isValid = false
-  }
-
-  if (!formData.value.captcha.trim()) {
-    errors.value.captcha = '请输入验证码'
-    isValid = false
-  } else if (!captchaVerified.value) {
-    errors.value.captcha = '验证码错误'
-    isValid = false
-  }
-
-  return isValid
+  const isUsernameValid = validateUsername()
+  const isPasswordValid = validatePassword()
+  const isCaptchaValid = validateCaptcha()
+  return isUsernameValid && isPasswordValid && isCaptchaValid
 }
 
-const handleCaptchaVerify = (success: boolean) => {
-  captchaVerified.value = success
-  if (success) {
-    errors.value.captcha = ''
+const handleLogin = async (): Promise<void> => {
+  if (!validateForm()) {
+    return
   }
-}
 
-const handleSubmit = async () => {
-  if (!validateForm()) return
-
-  isLoading.value = true
-
-  // 模拟登录请求
+  loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    console.log('登录成功', formData.value)
+    // 模拟登录请求
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    
+    // 这里应该调用实际的登录API
+    console.log('Login attempt:', {
+      username: form.username,
+      password: form.password,
+    })
+
+    // 登录成功，跳转到首页
     router.push('/')
   } catch (error) {
-    console.error('登录失败', error)
+    console.error('Login error:', error)
+    errors.captcha = '登录失败，请稍后重试'
+    captchaRef.value?.refresh()
+    form.captcha = ''
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
 
-const goToRegister = () => {
+const goToRegister = (): void => {
   router.push('/register')
+}
+
+const handleUsernameBlur = (): void => {
+  if (form.username) validateUsername()
+}
+
+const handlePasswordBlur = (): void => {
+  if (form.password) validatePassword()
 }
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-container">
+  <div class="login-container">
+    <div class="login-card">
       <div class="login-header">
-        <h1 class="title">欢迎回来</h1>
-        <p class="subtitle">登录您的账号</p>
+        <h1>欢迎回来</h1>
+        <p>登录到您的账户</p>
       </div>
 
-      <form class="login-form" @submit.prevent="handleSubmit">
+      <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
           <label for="username">用户名</label>
           <input
             id="username"
-            v-model="formData.username"
+            v-model="form.username"
             type="text"
-            class="form-input"
-            :class="{ 'error': errors.username }"
             placeholder="请输入用户名"
-            autocomplete="username"
+            :class="{ 'error': errors.username }"
+            @blur="handleUsernameBlur"
           />
           <span v-if="errors.username" class="error-message">{{ errors.username }}</span>
         </div>
@@ -108,43 +145,39 @@ const goToRegister = () => {
           <label for="password">密码</label>
           <input
             id="password"
-            v-model="formData.password"
+            v-model="form.password"
             type="password"
-            class="form-input"
-            :class="{ 'error': errors.password }"
             placeholder="请输入密码"
-            autocomplete="current-password"
+            :class="{ 'error': errors.password }"
+            @blur="handlePasswordBlur"
           />
           <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
         </div>
 
         <div class="form-group">
           <label for="captcha">验证码</label>
-          <CaptchaVerify
-            ref="captchaRef"
-            v-model="formData.captcha"
-            @verify="handleCaptchaVerify"
-          />
-          <input
-            id="captcha"
-            v-model="formData.captcha"
-            type="text"
-            class="form-input captcha-input"
-            :class="{ 'error': errors.captcha }"
-            placeholder="请输入验证码"
-            maxlength="4"
-          />
+          <div class="captcha-wrapper">
+            <input
+              id="captcha"
+              v-model="form.captcha"
+              type="text"
+              placeholder="请输入验证码"
+              :class="{ 'error': errors.captcha }"
+              maxlength="4"
+            />
+            <CaptchaVerify ref="captchaRef" v-model="form.captcha" />
+          </div>
           <span v-if="errors.captcha" class="error-message">{{ errors.captcha }}</span>
         </div>
 
-        <button type="submit" class="submit-btn" :disabled="isLoading">
-          <span v-if="isLoading" class="loading-spinner"></span>
-          <span v-else>登录</span>
+        <button type="submit" class="login-btn" :disabled="loading">
+          <span v-if="loading" class="loading-spinner"></span>
+          {{ loading ? '登录中...' : '登录' }}
         </button>
 
-        <div class="form-footer">
-          <span>还没有账号？</span>
-          <a href="javascript:void(0)" class="register-link" @click="goToRegister">立即注册</a>
+        <div class="login-footer">
+          <span>还没有账户？</span>
+          <a href="#" class="register-link" @click.prevent="goToRegister">立即注册</a>
         </div>
       </form>
     </div>
@@ -152,39 +185,52 @@ const goToRegister = () => {
 </template>
 
 <style scoped>
-.login-page {
+.login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f4fd 0%, #f5f7fa 50%, #eef2f7 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
 }
 
-.login-container {
-  width: 100%;
-  max-width: 400px;
-  background: white;
+.login-card {
+  background: #ffffff;
   border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 
-.title {
+.login-header h1 {
   font-size: 28px;
   font-weight: 600;
   color: #1a1a2e;
   margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
 }
 
-.subtitle {
+.login-header p {
   font-size: 14px;
-  color: #6b7280;
+  color: #8a8a9b;
   margin: 0;
 }
 
@@ -201,79 +247,100 @@ const goToRegister = () => {
 }
 
 .form-group label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: #3a3a4a;
+  margin: 0;
 }
 
-.form-input {
+.form-group input {
+  width: 100%;
   padding: 12px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
   font-size: 14px;
+  color: #1a1a2e;
+  background-color: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 8px;
   transition: all 0.2s ease;
-  background: #fafbfc;
-}
-
-.form-input:focus {
   outline: none;
-  border-color: #4a90d9;
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
-  background: white;
+  box-sizing: border-box;
 }
 
-.form-input.error {
-  border-color: #ef4444;
+.form-group input::placeholder {
+  color: #a8a8b8;
 }
 
-.form-input.error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+.form-group input:focus {
+  background-color: #ffffff;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.captcha-input {
-  margin-top: 8px;
+.form-group input.error {
+  border-color: #e53e3e;
+  background-color: #fff5f5;
+}
+
+.form-group input.error:focus {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
 }
 
 .error-message {
   font-size: 12px;
-  color: #ef4444;
+  color: #e53e3e;
+  margin: 0;
 }
 
-.submit-btn {
-  padding: 14px 24px;
-  background: linear-gradient(135deg, #4a90d9 0%, #3a7bc8 100%);
-  color: white;
+.captcha-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.captcha-wrapper input {
+  flex: 1;
+}
+
+.login-btn {
+  margin-top: 8px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 144, 217, 0.3);
+.login-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
 }
 
-.submit-btn:active:not(:disabled) {
+.login-btn:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.submit-btn:disabled {
+.login-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 .loading-spinner {
   display: inline-block;
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top-color: transparent;
   border-radius: 50%;
-  border-top-color: white;
   animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 @keyframes spin {
@@ -282,22 +349,37 @@ const goToRegister = () => {
   }
 }
 
-.form-footer {
+.login-footer {
+  margin-top: 20px;
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: #8a8a9b;
+}
+
+.login-footer span {
+  margin-right: 4px;
 }
 
 .register-link {
-  color: #4a90d9;
+  color: #667eea;
   text-decoration: none;
-  margin-left: 4px;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
 .register-link:hover {
-  color: #3a7bc8;
+  color: #764ba2;
   text-decoration: underline;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 36px 24px;
+  }
+
+  .login-header h1 {
+    font-size: 24px;
+  }
 }
 </style>
