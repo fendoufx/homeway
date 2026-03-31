@@ -190,8 +190,60 @@ const handlePasswordBlur = (): void => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  /* 科技风格背景 - 深色渐变 + 网格 + 光效 */
+  background: 
+    radial-gradient(ellipse at top left, rgba(0, 120, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at center, rgba(0, 200, 255, 0.1) 0%, transparent 60%),
+    linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0d1025 100%);
+  position: relative;
+  overflow: hidden;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* 科技网格背景 */
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0, 120, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 120, 255, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(30px, 30px); }
+}
+
+/* 科技线条装饰 */
+.login-container::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 800px;
+  height: 800px;
+  transform: translate(-50%, -50%);
+  background: 
+    radial-gradient(circle at 30% 30%, rgba(0, 200, 255, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(138, 43, 226, 0.1) 0%, transparent 40%),
+    radial-gradient(circle, rgba(0, 120, 255, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
 }
 
 .login-card {
@@ -202,7 +254,6 @@ const handlePasswordBlur = (): void => {
   width: 100%;
   max-width: 420px;
   animation: slideUp 0.5s ease-out;
-  margin: auto;
 }
 
 @keyframes slideUp {
