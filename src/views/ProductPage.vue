@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { products as allProducts, type Product } from '@/data/products'
+
+const router = useRouter()
 
 // 状态
 const displayedProducts = ref<Product[]>([])
@@ -117,6 +120,7 @@ onUnmounted(() => {
           v-for="product in displayedProducts"
           :key="product.id"
           class="product-card"
+          @click="router.push(`/product/${product.id}`)"
         >
           <div class="product-image">
             <img :src="product.image" :alt="product.name" loading="lazy" />
@@ -256,6 +260,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   animation: fadeInUp 0.4s ease-out;
+  cursor: pointer;
 }
 
 @keyframes fadeInUp {
