@@ -202,6 +202,7 @@ const handlePasswordBlur = (): void => {
   width: 100%;
   max-width: 420px;
   animation: slideUp 0.5s ease-out;
+  margin: auto;
 }
 
 @keyframes slideUp {
