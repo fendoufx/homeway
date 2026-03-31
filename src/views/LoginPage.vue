@@ -94,8 +94,8 @@ const handleLogin = async (): Promise<void> => {
       password: form.password,
     })
 
-    // 登录成功，跳转到首页
-    router.push('/')
+    // 登录成功，跳转到产品页面
+    router.push('/products')
   } catch (error) {
     console.error('Login error:', error)
     errors.captcha = '登录失败，请稍后重试'
